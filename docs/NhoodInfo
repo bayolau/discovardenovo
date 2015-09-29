@@ -1,0 +1,226 @@
+================
+NhoodInfo Manual
+================
+
+NhoodInfo is a visualization tool for DISCOVAR de novo assemblies. Regions of interest can be selected using reference co-ordinates, short alignable sequences, line ids, or edge ids. The annotated localized graph is generated as a GraphViz dot file, or optionally also as a PDF or PNG file.
+
+
+Introduction
+============
+
+DISCOVAR de novo assemblies are graphs, and for large genomes they are too large to view easily. NhoodInfo is a visualization tool that lets you pull out the portion of the assembly graph for a particular region of genome. There are various ways to specify the target region, plus a number of different visualization options.
+
+NhoodInfo has two modes: command line and interactive. The majority of options are shared between both modes, but a few a specific to one or the other. In the command line mode you run the tool once, producing a single graph for the region you specified, then the tool exits. To view a different region or change the visualization parameters you need to re-run the tool with new command line options. Since loading the assembly data structures each time can take a few minutes for a large genome, it is also possible to use HhoodInfo interactively. In this mode the tool launches and loads the assembly data structures once, then presents an interactive prompt. Each time a new command is entered at the prompt the output graph file(s) are regenerated accordingly. This avoids the delay in launching the tool and allows rapid exploration of the assembly graph. However, in order to explore a new assembly the tool must be restarted.
+
+
+Use an aligned assembly
+=======================
+
+NhoodInfo works best if the assembly has been aligned to a reference genome. This allows the use of referene coordinates when exploring the graph using the SEEDS argument, and also allows extra annotations to be displayed. Without the alignment, the SEEDS argument can only be used with edge or line IDs, or with a query base sequence. If you try to use reference coordinates on an unaligned assemble an error message will be displayed.
+
+In order to generate an aligned assembly, assuming a reference is available, you must run DiscovarDeNovo with the extra argument REFHEAD. For more information, please see the DiscovarDeNovo documentation.
+
+If you encounter difficulties using reference coordinates, check the names file that accompanies your reference fasta file, or create one if it doesn't already exist.
+
+
+
+Input files
+===========
+
+NhoodInfo takes as input the global assembly graph plus various auxiliary files. These are found in the subdirectory a.fin of your assembly output directory. Either launch the tool from this directory or provide the path to it via the argument DIR_IN.
+
+
+
+Output files
+============
+
+NhoodInfo generates a subgraph representing only the portion of the genome requested and writes it the file OUT.dot, where OUT is the value of the command line argument. You must specify a value for OUT even if using NhoodInfo in interactive mode.
+
+The dot file can be viewed directly using the GraphViz tool, or converted to an image with the GraphViz dot command. For example:
+
+    dot -Tsvg example.dot -o example.svg
+
+Alternatively, NhoodInfo can generate image files directly if either the arguments PNG or PDF are set to true. Many image viewers will automatically update the displayed image if the underlying file is changed, which works well with interactive mode. Note that GraphViz dot must be install and available for these two options to work.
+
+In addition to the dot file NhoodInfo also generates a small FASTA file that contains just the edges in the subgraph. The file is called OUT.fasta
+
+
+
+Anatomy of the graph
+====================
+
+In a DISCOVAR de novo graph edges represent sequence, whilst vertices represent adjacencies between sequences. Edge sequences overlap by K-1 bases, where K is the kmer size (200) used to construct the graph. Edges are color coded by length: grey < black < red < magenta. Brown edges represent captured gaps. If GREEN=True then green edges represent seed edges found by the SEEDS command. Red vertices represent truncation points where the global graph continues, but the subgraph exploration has stopped - to explore further increase DEPTH.
+
+Edge annotation depends on edge size and mapping status. Edge length is omitted for short edges, but included in longer edges. Unmapped edges are annotated with the edge ID, but edges mapped to the reference are annotated as follows:
+
+     edge_id [copy_number] (mapping) (edge_length)
+
+e.g
+
+     345661 [1.05x] (+11:90,256,509-7,740) (1.0kb)
+
+The copy number is a rough estimate, but can be interpreted as follows for a non-repetitive section of a diploid organism: A value of 0.5 indicates the edge is present in only one haplotype, whilst a value of 1.0 indicates it is present in both. Higher values can represent repeats.
+
+The reference mapping can be read as follows:
+
+     ( orientation chromosome:start-end )
+
+The orientation is + for forward on the reference, - for reserve. The chromosome name comes next, followed by a range specified by start and end. Note that the end of the range is given in a shortened form, and in the example above 7,740 is short for 90,257,740. If the assembly is unaligned, then no reference mapping coordinates will be displayed.
+
+If COUNT=True then each edge has an extra annotation giving the read count in the form C=n, where n is the number of reads mapped to the edge. E.g.
+
+     345661 [1.05x] (+11:90,256,509-7,740) C=221 (1.0kb)
+
+If SHOW_INV=True then the edge ID of the reverse compliment edge will also be shown as <edge_id>. E.g.
+
+     345661<3754505> [1.05x] (+11:90,256,509-7,740) (1.0kb)
+
+
+Interactive mode
+================
+
+Running NhoodInfo interactively normally the preferred way to explore a genome assembly. Simply launch the tool as follows:
+
+    NhoodInfo DIR_IN=my_assembly/a.fin OUT=region INTERACTIVE=True
+
+Once the assembly data structures have loaded a prompt will appear. At the prompt you can use many of the regular command line arguments. Every time a new command is entered the assembly graph is regenerated accordingly and written to OUT.dot (e.g. region.dot in the case of the example above). To exit interactive mode use CTRL-c.
+
+In order to generate a subgraph you must specify a region of interest using the SEEDS option:
+
+    Interactive mode, type H for help, Ctrl-C to exit.
+    ? SEEDS=11:90.26M
+
+
+Command line mode
+=================
+
+Running NhoodInfo directly from the command line as follows:
+
+	NhoodInfo DIR_IN=my_assembly/a.fin OUT=region SEEDS=11:90.26M
+
+Unlike interactive mode, it is necessary to directly specify the region to explore using the SEEDS option on the command line. NhoodInfo will generate the subgraph and write it to OUT.dot (e.g. region.dot in the case of the example above), then exit. Loading in the necessary data structures can take several minutes for a large genome, so running NhoodInfo in this manner is generally less efficient.
+
+
+NhoodInfo commands
+===================
+
+The most important (and required) command is SEEDS. This is used to specify the region to explore, which can be given in a number of different ways:
+
+SEEDS=all
+
+	Generates graph for the entire assembly, not a subgraph. For a large genome this is not possible and NhoodInfo will refuse to co-operate.
+
+SEEDS=g:a	  
+
+	where g is the chromosome name and a is a location on that chromosome. Generates a graph for the region surrounding the locus specified by g and a. E.g SEEDS=11:90.26M would generate a graph seeded around the edge that aligned to position 90.26M on chromosome 11. A reference genome must have been supplied in order to generate the mapping of the assembly edges. Requires an aligned assembly.
+
+SEEDS=g:a-b
+
+	where g is the chromosome name and a-b defines a range of locations on that chromosome. Generates a graph for the region specified by the range a-b. E.g SEEDSS=11:90-91M would generate a graph containing edges that aligned between position 90M and 91M on chromosome 11. A reference genome must have been supplied in order to generate the mapping of the assembly edges. Requires an aligned assembly.
+
+SEEDS=n
+
+	where n is an assembly edge ID. Generates a graph for the region surrounding the specified edge. E.g. SEEDS=12 would generate a graph containing edge 12.
+
+SEEDS=n1-n2
+
+	where n1 and n2 are assembly edge IDs. Generates a graph for the region containing edges in the range n1 to n2. E.g. SEEDS=12-15 would generate a graph containing edges 12,13,14, and 15.
+
+SEEDS=Ln
+
+	where n is a line ID. Generates a graph for the region contained in the line n. E.g. SEEDS=L13 would generate a graph for line 13. See documentation on DISCOVAR de novo lines for more information.
+
+SEEDS=seq
+
+	where seq is a short sequence of 20 or more bases (ATCG). Generates a graph containing all edges that match exactly the specified sequence. Note that for a large genome this could take some time, unless SEQ_LOOKUP=True was specified on the command line at startup.
+
+There is one special command that can be used to append new edges to an existing set of seed edges. Having defined a set of set edges with SEEDS, you can add more edges at the interactive prompt using +n where n is an edgeID.
+
+
+
+Whilst the SEEDS command defines an initial set of edges that go to form the subgraph, the follow commands modify that set:
+
+DEPTH=n
+
+	Generate a graph by exploring up to n edges beyond the set defined by SEEDS. E.g. DEPTH=3 would generate a graph where the global assembly graph was explore to a depth of 3 edges from the initial set of edges defined by SEEDS.
+
+EXT=True (default False)
+
+	Generate a graph by extending from the set of edge defined by SEEDS to the end of the lines in which they are contained. E.G. if SEEDS=12 and EXT=True then the graph would be explored from edge 12 in both directions until the ends of the line containing edge 12 are reached.
+
+
+The following commands alter the edge annotations:
+
+COUNT=True (default False)
+
+	Display aligned read counts for each edge.
+
+REL=True (default False)
+
+	Use relative edge numbering. The global edge IDs can be large, but setting this to true will renumber the edges in the subgraph starting at 1. Can reduce the clutter on the graph.
+
+SHOW_INV=True (default False)
+
+	Display the edge ID for the RC edges on the graph. Each edge has a RC partner, and setting this will cause the partner's ID to be displayed as well.
+
+
+The remaining commands do not alter the structure of the graph, but do change how it is visualized:
+
+GREEN=True (default False)
+	  
+	Color all seed edges green. Useful to make the seed edges stand out against those found as a result of DEPTH or EXT.
+
+NEATO=True (default False)
+
+	Use the NEATO layout engine in GraphViz dot. The can make large scale circular features in the graph easier to view.
+
+FONTSIZE=n
+
+	GraphViz dot edge label font size.
+
+SCALE=n
+	
+	GraphViz dot edge thickness, arrow size and vertex size scaling.
+
+
+Command line only commands
+==========================
+
+The following commands are valid only from the command line and not within interactive mode:
+
+DIR_IN=assembly_directory (default current directory)
+
+	Location of the DISCOVAR assembly directory.
+
+OUT=out_file
+
+	NhoodInfo generates the subgraph for the region as out_file.dot, plus an associated fasta file.
+
+SEEDS_MINUS=seeds
+
+	Exclude the edge IDs listed in seeds when generating the graph of a region. Overrides any edge IDs defined using the SEEDS option.
+
+INTERACTIVE=True (default False)
+
+	Runs NhoodInfo in interactive mode.
+
+PNG=True (default False)
+
+	Generates a PNG version of the graph in addition to the dot file. Requires GraphViz dot. Useful when running in interactive mode.
+
+PDF=True (default False)
+
+	Generates a PDF version of the graph in addition to the dot file. Requires GraphViz dot. Useful when running in interactive mode.
+
+SEQ_LOOKUP=True (default False)
+
+	On startup builds a sequence lookup table that is used to support the SEEDS=seq option described above. Building this table can take some time for a large genome.
+
+
+-------------
+End of Manual
+
+Computational Research and Development Group
+Broad Institute of MIT and Harvard
+Cambridge, United States of America
+

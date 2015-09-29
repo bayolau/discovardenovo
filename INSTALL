@@ -1,0 +1,67 @@
+DISCOVAR de novo installation
+=============================
+
+
+Requirements
+------------
+
+64 bit x86_64 based linux distribution
+
+GCC 4.7 or above
+
+jemalloc 3.6.0 or above
+
+samtools (required if using bam files)
+
+
+Building
+--------
+
+Ensure that GCC and jemalloc are built and installed on your system.
+
+Download the latest version of DISCOVAR de novo from the FTP site.
+
+Extract the contents of the downloaded file:
+
+    tar xzf discovardenovo-NNNNN.tar.gz
+
+Move into the unpacked directory:
+
+    cd discovardenovo-NNNNN
+
+Execute the configuration script:
+
+    ./configure
+
+This assumes that you can copy executables to /usr/local/bin.  If you cannot, you should instead execute:
+    ./configure --prefix=<install-root-dir>
+For example:
+    ./configure --prefix=/usr/local
+
+Build the software:
+
+    make all
+
+Install the software:
+
+    make install
+
+
+The executables will be in /usr/local/bin, or in the location you provided with the prefix option. We recommend you add the executables directory to your path.
+
+
+Troubleshooting
+---------------
+
+The 'configure' script supports numerous options that allow control of which functionality is enabled. To see these options use:
+
+    ./configure --help
+
+DISCOVAR de novo requires jemalloc to be built and installed. The configuration script will try to find the appropriate library, but if it fails you can specify the location using:
+
+    ./configure --with-jemalloc=<jemalloc-lib-dir>
+
+e.g. 
+
+    ./configure --with-jemalloc=/usr/local/jemalloc/lib
+

@@ -1,0 +1,78 @@
+SPECIFICATION OF INPUT DATA TO DISCOVAR DE NOVO
+
+The formal specification is given in detail below.  If this is too much for
+a first reading, skip down the the EXAMPLES section!
+
+Input reads are specified using
+READS="rg1 + ... + rgn"
+where each rgi is a "read group" (see below).  Alternatively the syntax
+READS=@fn
+may be used, where fn is a file having lines
+rg1
+rg2
+...
+rgn
+
+Blanks in the READS specification are allowed for clarity and are removed at 
+the start of processing.
+
+====================================================================================
+
+READ GROUP SYNTAX
+
+Each individual read group has the form
+
+arg1:value1, arg2:value2, ..., argn:valuen :: data
+
+or simply
+
+data
+
+where data is described below and the allowed arg:value fields are:
+* type:t, where t is frag or long or jump (but only frag allowed now); default frag
+* sample:s, where s is the sample name; default C
+* lib:l, where l is the library name (currently unused); default 1
+* frac:c, where f is the decimal fraction of the data to be used; default 1.
+
+We recommend that the sample be a short string, as this makes it easier to 
+interactively examine the assembly graph.
+
+====================================================================================
+
+DATA SYNTAX
+
+The data field is a comma-separated list of file specifiers (see below).
+Each file specifier is expanded by globbing, and this globbing will expand
+expressions of the form {x1,...,xn}, a "csh extension".  You can probably find 
+the details of the standard globbing rules using "man 7 glob".
+
+The expanded list must consist of files having one of the following formats:
+* a bam file, with extension .bam
+* a fastq file, with extension .fastq or .fq (or .fastq.gz or .fq.gz if compressed)
+* a fastb file, with extension .fastb.
+
+The x.fastb format is internal, and if used, there must be a parallel x.qualb
+or x.qualp file.
+
+Handling of fastq files for type frag and jump.  If two files are within the same 
+read group and start with the same read name, they will be treated as paired. 
+Otherwise the file will be treated as interlaced: read pairs appear as consecutive
+entries.  (Technical note: the read name is computed as the text after the
+initial @, and before the first blank, slash or newline.)
+
+====================================================================================
+
+EXAMPLES
+
+1. READS="x.bam"
+
+Use the reads in the file x.bam.  These are treated as type frag.
+
+2. READS="woof/*.fastq"
+
+where the directory woof contains pairs of non-interlaced fastq files, to be
+treated as type frag.  Find them all and pair them as described above.
+
+3. READS="sample:T :: t.bam   +   sample:N :: n.bam"
+
+this specifies data for a sample T (perhaps tumor) and a sample N (perhaps normal).
